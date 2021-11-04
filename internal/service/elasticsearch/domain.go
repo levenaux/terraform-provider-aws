@@ -122,6 +122,59 @@ func ResourceDomain() *schema.Resource {
 					},
 				},
 			},
+			"auto_tune_options": {
+				Type:     schema.TypeList,
+				Optional: true,
+				MaxItems: 1,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"desired_state": {
+							Type:         schema.TypeString,
+							Required:     true,
+							ValidateFunc: validation.StringMatch(regexp.MustCompile(`ENABLED|DISABLED`), "must be 'ENABLED' or 'DISABLED'"),
+						},
+						"maintenance_schedules": {
+							Type:     schema.TypeList,
+							Optional: true,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"start_at": {
+										Type:         schema.TypeString,
+										Required:     true,
+										ValidateFunc: verify.ValidUTCTimestamp,
+									},
+									"duration": {
+										Type:     schema.TypeSet,
+										Required: true,
+										Elem: &schema.Resource{
+											Schema: map[string]*schema.Schema{
+												"value": {
+													Type:     schema.TypeInt,
+													Required: true,
+												},
+												"unit": {
+													Type:         schema.TypeString,
+													Required:     true,
+													ValidateFunc: validation.StringMatch(regexp.MustCompile(`HOURS`), "must be 'HOURS'"),
+												},
+											},
+										},
+									},
+									"cron_expression": {
+										Type:     schema.TypeString,
+										Required: true,
+									},
+								},
+							},
+						},
+						"rollback_on_disable": {
+							Type:         schema.TypeString,
+							Required:     true,
+							ValidateFunc: validation.StringMatch(regexp.MustCompile(`NO_ROLLBACK|DEFAULT_ROLLBACK`), "must be 'NO_ROLLBACK' or 'DEFAULT_ROLLBACK'"),
+						},
+					},
+				},
+			},
 			"domain_name": {
 				Type:     schema.TypeString,
 				Required: true,
@@ -482,6 +535,10 @@ func resourceDomainCreate(d *schema.ResourceData, meta interface{}) error {
 
 	if v, ok := d.GetOk("advanced_security_options"); ok {
 		input.AdvancedSecurityOptions = expandAdvancedSecurityOptions(v.([]interface{}))
+	}
+
+	if v, ok := d.GetOk("auto_tune_options"); ok {
+		input.AutoTuneOptions = expandAutoTuneOptions(v.([]interface{}))
 	}
 
 	if v, ok := d.GetOk("ebs_options"); ok {

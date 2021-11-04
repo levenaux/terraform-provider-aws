@@ -1,6 +1,8 @@
 package elasticsearch
 
 import (
+	"time"
+
 	"github.com/aws/aws-sdk-go/aws"
 	elasticsearch "github.com/aws/aws-sdk-go/service/elasticsearchservice"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -42,6 +44,23 @@ func expandAdvancedSecurityOptions(m []interface{}) *elasticsearch.AdvancedSecur
 	}
 
 	return &config
+}
+
+func expandAutoTuneOptions(m []interface{}) *elasticsearch.AutoTuneOptionsInput {
+	config := elasticsearch.AutoTuneOptionsInput{}
+	group := m[0].(map[string]interface{})
+
+	if desiredState, ok := group["desired_state"].(string); desiredState == "ENABLED" {
+		config.DesiredState = aws.String(desiredState)
+
+		if schedules, ok := group["maintenance_schedules"].([]interface{}); ok {
+			for _, v := range schedules {
+				ams := elasticsearch.AutoTuneMaintenanceSchedule{}
+				schedule := v.(map[string]interface{})
+				ams.StartAt = schedule["start_at"].(*time.Time)
+			}
+		}
+	}
 }
 
 func expandESSAMLOptions(data []interface{}) *elasticsearch.SAMLOptionsInput {
